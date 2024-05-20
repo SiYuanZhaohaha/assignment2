@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# Function to clean and merge the data files
+clean_and_merge_data_files() {
+    # Define the input files
+    for file in "$@"; do
+        header=$(head -n 1 "$file")
+        if echo "$header" | grep -q "GDP per capita"; then
+            gdp_file="$file"
+        elif echo "$header" | grep -q "Homicide rate"; then
+            homicide_file="$file"
+        elif echo "$header" | grep -q "Life expectancy"; then
+            life_expectancy_file="$file"
+        else
+            echo "Error: Unrecognized file format in $file" >&2
+            exit 1
+        fi
+    done
+
+    # Check if all necessary files are assigned
+    if [[ -z "$gdp_file" || -z "$homicide_file" || -z "$life_expectancy_file" ]]; then
+        echo "Error: Missing one or more input files" >&2
+        exit 1
+    fi
+
+    # Read and merge the data
+    awk -F'\t' '
+    BEGIN {
+        OFS = FS
+        # Print the correct header
+        print "Entity", "Code", "Year", "GDP per capita, PPP (constant 2017 international $)", "Population (historical estimates)", "Homicide rate per 100,000 population - Both sexes - All ages", "Life expectancy - Sex: all - Age: at birth - Variant: estimates", "Cantril ladder score"
+    }
+    FNR==1 {
+        header_fields = NF
+    }
+    FNR==NR && NR>1 {
+        # Process GDP file
+        if (FILENAME == ARGV[1]) {
+            if (NF != header_fields) {
+                system("printf \"Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header\\n\" >&2")
+                next
+            }
+            key = $1 FS $2 FS $3
+            if ($2 == "" || $3 < 2011 || $3 > 2021) next
+            gdp[key] = $5
+            population[key] = $4
+            cantril[key] = $6
+        }
+        next
+    }
+    FNR!=NR && FILENAME==ARGV[2] && NR>1 {
+        # Process Homicide Rate file
+        if (NF != header_fields) {
+            system("printf \"Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header\\n\" >&2")
+            next
+        }
+        key = $1 FS $2 FS $3
+        if ($2 == "" || $3 < 2011 || $3 > 2021) next
+        homicide[key] = $4
+        next
+    }
+    FNR!=NR && FILENAME==ARGV[3] && NR>1 {
+        # Process Life Expectancy file
+        if (NF != header_fields) {
+            system("printf \"Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header\\n\" >&2")
+            next
+        }
+        key = $1 FS $2 FS $3
+        if ($2 == "" || $3 < 2011 || $3 > 2021) next
+        life[key] = $4
+        population[key] = $5
+        next
+    }
+    END {
+        # Merge the data and print in the specified order
+        for (key in gdp) {
+            split(key, arr, FS)
+            entity = arr[1]
+            code = arr[2]
+            year = arr[3]
+            gdp_val = gdp[key]
+            population_val = population[key]
+            homicide_rate = (key in homicide) ? homicide[key] : ""
+            life_expectancy = (key in life) ? life[key] : ""
+            cantril_score = cantril[key]
+            if (year >= 2011 && year <= 2021) {
+                print entity, code, year, gdp_val, population_val, homicide_rate, life_expectancy, cantril_score
+            }
+        }
+    }
+    ' "$gdp_file" "$homicide_file" "$life_expectancy_file"
+}
+
+# Call the function with the provided files and save the output to sample1.tsv
+clean_and_merge_data_files "$@" > sample1.tsv
