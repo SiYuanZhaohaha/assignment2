@@ -75,7 +75,7 @@ calculate_mean_correlation() {
         }
         if (country_count > 0) {
             mean_correlation = total_correlation / country_count
-            print mean_correlation
+            printf "%.3f\n", mean_correlation
         } else {
             print 0
         }
@@ -102,12 +102,13 @@ best_correlation=0
 for predictor in gdp population homicide life_expectancy; do
     correlation=$(eval echo \$${predictor}_mean_correlation)
     abs_correlation=$(awk -v x="$correlation" 'BEGIN { if (x < 0) print -x; else print x }')
-    if (( $(echo "$abs_correlation > $max_correlation" | awk '{print ($1 > 0)}') )); then
+    if (( $(awk -v a="$abs_correlation" -v b="$max_correlation" 'BEGIN { print (a > b) }') )); then
         max_correlation=$abs_correlation
         best_predictor=$predictor
         best_correlation=$correlation
     fi
 done
+
 
 # Output the correlations and the best predictor
 echo "Mean correlation of Homicide Rate with Cantril ladder is $homicide_mean_correlation"
