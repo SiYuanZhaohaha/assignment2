@@ -37,11 +37,13 @@ clean_and_merge_data_files() {
         # Process GDP file
         if (FILENAME == ARGV[1]) {
             if (NF != header_fields) {
-                system("printf \"Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header\\n\" >&2")
+                system("echo Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header >&2")
                 next
             }
             key = $1 FS $2 FS $3
-            if ($2 == "" || $3 < 2011 || $3 > 2021) next
+            if ($2 == "" || $3 < 2011 || $3 > 2021) {
+                next
+            }
             gdp[key] = $5
             population[key] = $4
             cantril[key] = $6
@@ -51,22 +53,26 @@ clean_and_merge_data_files() {
     FNR!=NR && FILENAME==ARGV[2] && NR>1 {
         # Process Homicide Rate file
         if (NF != header_fields) {
-            system("printf \"Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header\\n\" >&2")
+            system("echo Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header >&2")
             next
         }
         key = $1 FS $2 FS $3
-        if ($2 == "" || $3 < 2011 || $3 > 2021) next
+        if ($2 == "" || $3 < 2011 || $3 > 2021) {
+            next
+        }
         homicide[key] = $4
         next
     }
     FNR!=NR && FILENAME==ARGV[3] && NR>1 {
         # Process Life Expectancy file
         if (NF != header_fields) {
-            system("printf \"Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header\\n\" >&2")
+            system("echo Warning: Line " FNR " in file " FILENAME " does not have the same number of cells as the header >&2")
             next
         }
         key = $1 FS $2 FS $3
-        if ($2 == "" || $3 < 2011 || $3 > 2021) next
+        if ($2 == "" || $3 < 2011 || $3 > 2021) {
+            next
+        }
         life[key] = $4
         population[key] = $5
         next
